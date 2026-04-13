@@ -1,0 +1,12 @@
+.idea/
+.cache/
+.xmake/
+build/
+.DS_Store
+.vscode
+
+
+compile_commands.json
+CMakeCache.txt
+CMakeLists.txt
+cmake-*/
