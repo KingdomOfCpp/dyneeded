@@ -30,19 +30,15 @@ static constexpr string_view kBiblePassages[] = {
 
 static int MainMode(const Args& args) {
     auto exe = *args.Executable;
-    if (args.Recurse) {
-        fmt::println(stderr, "Recurse not implemented yet");
-    }
     auto exe_path = fs::path(exe);
-    auto deps = ResolveDependencies(exe_path);
+    auto deps = ResolveDependencies(exe_path, args.Recurse);
     if (deps.has_error()) {
         fmt::println(stderr, "Error resolving dependencies");
         return 1;
     }
 
     if (args.Json) {
-        auto json = glz::write<glz::opts{.prettify = true}>(*deps);
-        if (json) {
+        if (auto json = glz::write<glz::opts{.prettify = true}>(*deps)) {
             fmt::println("{}", *json);
         } else {
             fmt::println(stderr, "Error serializing to json");

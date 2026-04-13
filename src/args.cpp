@@ -18,6 +18,8 @@ namespace dyneeded {
                 result.Classic = true;
             } else if (arg == "-j" || arg == "--json") {
                 result.Json = true;
+            } else if (arg == "--hyprland-btw") {
+                result.HyprlandBtw = true;
             } else if (arg.starts_with("-")) {
                 fmt::println("Unknown option: {}", arg);
                 result.Help = true;

@@ -17,7 +17,7 @@ add_requires("fmt")
 add_requires("lief")
 add_requires("ftxui")
 add_requires("glaze")
-add_requires("boost", {configs = {unordered = true, leaf = true}})
+add_requires("boost", {system = false, configs = {unordered = true, leaf = true}})
 
 target("dyneeded_core")
     set_languages("cxx23")

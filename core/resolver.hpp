@@ -3,5 +3,5 @@
 #include "prelude.hpp"
 
 namespace dyneeded {
-    result<vector<DynamicLibrary> > ResolveDependencies(const fs::path &path);
+    result<vector<DynamicLibrary> > ResolveDependencies(const fs::path &path, bool recurse = false);
 }
