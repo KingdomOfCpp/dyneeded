@@ -9,6 +9,10 @@ if is_plat("windows") then
     end
 end
 
+if is_mode("release") then
+    set_policy("build.optimization.lto", true)
+end
+
 add_requires("fmt")
 add_requires("lief")
 add_requires("ftxui")
