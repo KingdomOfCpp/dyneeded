@@ -33,8 +33,9 @@ jobs:
           sudo apt-get install -y \
             gcc-14 g++-14 
 
-      - name: Configure (not linux)
-        run: xmake config --toolchain=gcc-14 -m ${{ matrix.buildtype }} -y -vv
+      - name: Configure (windows)
+        if: runner.os == 'Windows'
+        run: xmake config --toolchain=msvc -m ${{ matrix.buildtype }} -y -vv
 
       - name: Configure (linux)
         if: runner.os == 'Linux'
