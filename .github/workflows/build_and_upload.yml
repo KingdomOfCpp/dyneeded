@@ -25,8 +25,20 @@ jobs:
           package-cache: true
           build-cache: true
 
-      - name: Configure
-        run: xmake config -m ${{ matrix.buildtype }} -y -vv
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-14 g++-14 
+
+      - name: Configure (not linux)
+        run: xmake config --toolchain=gcc-14 -m ${{ matrix.buildtype }} -y -vv
+
+      - name: Configure (linux)
+        if: runner.os == 'Linux'
+        run: xmake config --toolchain=gcc-14 -m ${{ matrix.buildtype }} -y -vv
 
       - name: Build
         run: xmake build -y -vv
