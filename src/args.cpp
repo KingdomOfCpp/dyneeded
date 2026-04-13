@@ -1,4 +1,5 @@
 #include "args.hpp"
+#include "fmt/base.h"
 #include <fmt/core.h>
 
 namespace dyneeded {

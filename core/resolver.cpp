@@ -8,10 +8,12 @@
 #include <vector>
 #include "LIEF/Abstract/Binary.hpp"
 #include "LIEF/ELF/Binary.hpp"
+#include "LIEF/PE/Binary.hpp"
 #include "LIEF/LIEF.hpp"
 #include "dynamic_library.hpp"
 #include "prelude.hpp"
-#ifdef __linux__
+
+#if defined(DYNEEDED_LINUX)
 
 namespace dyneeded {
     static const auto kSearchPaths = vector<fs::path>{
@@ -89,4 +91,38 @@ namespace dyneeded {
     }
 }
 
+#elif defined(DYNEEDED_WINDOWS)
+#include <Windows.h>
+
+namespace dyneeded {
+    optional<fs::path> FindLibrary(string_view name) {
+        char buffer[MAX_PATH];
+        auto ret = SearchPathA(nullptr, name.data(), nullptr, MAX_PATH, buffer, nullptr);
+        if (ret == 0 || ret > MAX_PATH) {
+            return nullopt;
+        }
+        return fs::path(buffer);
+    }
+
+    result<vector<DynamicLibrary> > ResolveDependencies(const fs::path &path) {
+        auto pe = LIEF::PE::Parser::parse(path.string());
+        if (!pe)
+            return new_error();
+
+        auto dependencies = vector<DynamicLibrary>();
+        for (const auto &lib: pe->imported_libraries()) {
+            auto path = FindLibrary(lib);
+            dependencies.push_back(DynamicLibrary{
+                .Name = lib,
+                .Path = path.value_or(fs::path(lib)),
+                .Versions = vector<string>{}
+            });
+        }
+
+        return dependencies;
+    }
+}
+
+#else
+#error "Unsupported platform"
 #endif

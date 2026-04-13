@@ -31,8 +31,11 @@ jobs:
       - name: Build
         run: xmake build -y -vv
 
+      - name: Pack
+        run: xmake pack -y -vv
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.buildtype }}
-          path: build/*/*/${{ matrix.buildtype }}/
+          path: build/xpack

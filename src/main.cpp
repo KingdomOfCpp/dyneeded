@@ -1,12 +1,16 @@
+#include <cstddef>
 #include <span>
 
 #include "../core/resolver.hpp"
 #include "boost/algorithm/string/split.hpp"
 #include <boost/algorithm/string.hpp>
 #include <vector>
+#include <glaze/glaze.hpp>
 #include <fmt/base.h>
 
 #include "args.hpp"
+#include "glaze/core/write.hpp"
+#include "glaze/json/write.hpp"
 #include "tui.hpp"
 
 using namespace dyneeded;
@@ -15,13 +19,13 @@ static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
         "Available options:\n"
         "\t-r or --recurse to also get the deps of the deps\n"
         "\t-j or --json to get the results in json\n"
-        "\t-c or --classic for classic ldd style printing"
+        "\t-c or --classic for classic ldd style printing\n"
         "\tMore hidden!\n";
 
 static constexpr string_view kBiblePassages[] = {
     "Once, on being asked by the Pharisees when the kingdom of God would come, Jesus replied, "
-    "“The coming of the kingdom of God is not something that can be observed, nor will people say, ‘Here it is,’ "
-    "or ‘There it is,’ because the kingdom of God is in your midst.”",
+    "“The coming of the kingdom of God is not something that can be observed, nor will people say, 'Here it is' "
+    "or 'There it is' because the kingdom of God is in your midst.”",
 };
 
 static int MainMode(const Args& args) {
@@ -37,7 +41,13 @@ static int MainMode(const Args& args) {
     }
 
     if (args.Json) {
-
+        auto json = glz::write<glz::opts{.prettify = true}>(*deps);
+        if (json) {
+            fmt::println("{}", *json);
+        } else {
+            fmt::println(stderr, "Error serializing to json");
+            return 1;
+        }
     } else if (args.Classic) {
         for (const auto& dep: *deps) {
             fmt::println("{} => {}", dep.Name, dep.Path.string());

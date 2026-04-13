@@ -1,28 +1,51 @@
 add_rules("mode.debug", "mode.release")
+includes("@builtin/xpack")
+
+if is_plat("windows") then
+    if is_mode("debug") then
+        set_runtimes("MTd")
+    else
+        set_runtimes("MT")
+    end
+end
 
 add_requires("fmt")
 add_requires("lief")
-add_requires("fast_io")
 add_requires("ftxui")
+add_requires("glaze")
 add_requires("boost", {configs = {unordered = true, leaf = true}})
 
 target("dyneeded_core")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_kind("static")
 
     add_files("core/**.cpp")
     add_headerfiles("core/**.hpp")
 
-    add_packages("fmt", "fast_io", "boost", "lief", "ftxui", { public = true })
+    add_packages("fmt", "boost", "lief", "ftxui", "glaze", { public = true })
     if is_plat("linux") then
         add_defines("DYNEEDED_LINUX", { public = true })
+    elseif is_plat("windows") then
+        add_cxxflags("/utf-8", { public = true }) -- for fmt
+        add_defines("DYNEEDED_WINDOWS", "NOMINMAX", { public = true })
     end
 
 target("dyneeded")
-    set_languages("cxx20")
+    set_languages("cxx23")
     set_kind("binary")
 
     add_files("src/**.cpp")
     add_headerfiles("src/**.hpp")
 
     add_deps("dyneeded_core")
+
+xpack("dyneeded")
+    set_version("1.0.0")
+    set_homepage("https://github.com/KingdomOfCpp/dyneeded")
+    add_targets("dyneeded")
+
+    set_title("dyneeded")
+    set_description("Cross platform dynamic dependency CLI tool")
+    set_author("KingdomOfCpp")
+
+    set_formats("nsis", "zip", "targz", "runself", "rpm", "deb")
