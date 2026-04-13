@@ -30,9 +30,7 @@ jobs:
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
-          sudo apt install -y build-essential gcc-14 g++-14 cmake \
-            devscripts equivs dh-make debhelper dpkg-dev fakeroot lintian \
-            rpm createrepo-c pbuilder sbuild gnupg alien p7zip-full zip unzip
+          sudo apt install -y gcc-14 g++-14
 
 
       - name: Configure (windows)
