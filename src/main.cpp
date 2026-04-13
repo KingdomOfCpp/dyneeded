@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
         auto biblePassage = kBiblePassages[rand() % std::size(kBiblePassages)];
         fmt::println("{}", biblePassage);
     } else if (args.HyprlandBtw) {
-        RunTuiMode();
+        return RunTuiMode();
     } else if (!args.Executable) {
         fmt::println(stderr, "Must supply an executable");
         return 1;

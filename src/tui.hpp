@@ -1,5 +1,5 @@
 #pragma once
 
 namespace dyneeded {
-    void RunTuiMode();
+    int RunTuiMode();
 }

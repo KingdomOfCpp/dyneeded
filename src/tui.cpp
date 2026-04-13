@@ -3,7 +3,8 @@
 #include <fmt/base.h>
 
 namespace dyneeded {
-    void RunTuiMode() {
+    int RunTuiMode() {
         fmt::println(stderr, "Hyprxistas its over TUI is not real yet");
+        return 1;
     }
 }
