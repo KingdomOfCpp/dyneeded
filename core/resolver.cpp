@@ -1,9 +1,6 @@
 #include "resolver.hpp"
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <filesystem>
-#include <gelf.h>
-#include <libelf.h>
-#include <fast_io.h>
 #include <fmt/core.h>
 #include <optional>
 #include <span>
