@@ -15,7 +15,7 @@ end
 
 add_requires("fmt")
 add_requires("lief")
-add_requires("ftxui")
+add_requires("ftxui", {config = {modules = true}})
 add_requires("glaze")
 add_requires("boost", {system = false, configs = {unordered = true, leaf = true}})
 

@@ -18,6 +18,10 @@ namespace dyneeded {
                 result.Classic = true;
             } else if (arg == "-j" || arg == "--json") {
                 result.Json = true;
+            } else if (arg == "-t" || arg == "--tree") {
+                result.Tree = true;
+            } else if (arg == "-f" || arg == "--fancy") {
+                result.Fancy = true;
             } else if (arg == "--hyprland-btw") {
                 result.HyprlandBtw = true;
             } else if (arg.starts_with("-")) {
