@@ -17,11 +17,11 @@
 using namespace dyneeded;
 
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
-        "Available options:\n"
-        "\t-r or --recurse to also get the deps of the deps\n"
-        "\t-j or --json to get the results in json\n"
-        "\t-c or --classic for classic ldd style printing\n"
-        "\tMore hidden!\n";
+    "Available options:\n"
+    "\t-r or --recurse to also get the deps of the deps\n"
+    "\t-j or --json to get the results in json\n"
+    "\t-c or --classic for classic ldd style printing\n"
+    "\tMore hidden!\n";
 
 static constexpr string_view kBiblePassages[] = {
     "Once, on being asked by the Pharisees when the kingdom of God would come, Jesus replied, "
@@ -29,16 +29,24 @@ static constexpr string_view kBiblePassages[] = {
     "or 'There it is' because the kingdom of God is in your midst.”",
 };
 
-static int MainMode(const Args& args) {
-    auto outputFormat = OutputFormat::Text;
-    if (args.Json) {
+static int MainMode(const Args& args)
+{
+    auto outputFormat = OutputFormat::Fancy;
+    if (args.Json)
+    {
         outputFormat = OutputFormat::Json;
-    } else if (args.Classic) {
+    }
+    else if (args.Classic)
+    {
         outputFormat = OutputFormat::Classic;
-    } else if (args.Tree) {
+    }
+    else if (args.Tree)
+    {
         outputFormat = OutputFormat::Tree;
-    } else if (args.Fancy) {
-        outputFormat = OutputFormat::Fancy;
+    }
+    else if (args.Text)
+    {
+        outputFormat = OutputFormat::Text;
     }
 
     RunAnalysis(args, outputFormat);
@@ -46,21 +54,31 @@ static int MainMode(const Args& args) {
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     auto raw_args = vector<string>(argv + 1, argv + argc);
     auto args = Args::Parse(raw_args);
 
-    if (args.Help) {
+    if (args.Help)
+    {
         fmt::println("{}", kHelpMessage);
-    } else if (args.Bible) {
+    }
+    else if (args.Bible)
+    {
         auto biblePassage = kBiblePassages[rand() % std::size(kBiblePassages)];
         fmt::println("{}", biblePassage);
-    } else if (args.HyprlandBtw) {
+    }
+    else if (args.HyprlandBtw)
+    {
         return RunTuiMode(args);
-    } else if (!args.Executable) {
+    }
+    else if (!args.Executable)
+    {
         fmt::println(stderr, "Must supply an executable");
         return 1;
-    } else {
+    }
+    else
+    {
         return MainMode(args);
     }
 

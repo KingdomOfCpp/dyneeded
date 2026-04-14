@@ -3,8 +3,10 @@
 #include <filesystem>
 #include <optional>
 
-namespace dyneeded {
-    struct DynamicLibrary {
+namespace dyneeded
+{
+    struct DynamicLibrary
+    {
         string Name;
         fs::path Path;
         vector<string> Versions;

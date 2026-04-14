@@ -34,6 +34,7 @@ There's some more flags if you ever need to use this thing
 seriously
 - `-r` or `--recursive` to also analyze the shared objects and their dependencies
 - `-j` or `--json` to get the output in JSON format
+- '-t' or `--tree` to get the output in a tree format
 
 ## LARPing with dyneeded
 To please the LARPers I could've written this thing in Rust

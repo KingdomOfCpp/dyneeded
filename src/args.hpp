@@ -4,12 +4,14 @@
 
 #include "../core/prelude.hpp"
 
-namespace dyneeded {
-    struct Args {
+namespace dyneeded
+{
+    struct Args
+    {
         bool Recurse;
         bool Json;
         bool Tree;
-        bool Fancy;
+        bool Text;
         bool Classic;
         bool Bible;
         bool HyprlandBtw;
