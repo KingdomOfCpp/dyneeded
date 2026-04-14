@@ -145,13 +145,7 @@ namespace dyneeded
         return fs::path(buffer);
     }
 
-    result<vector<DynamicLibrary>> ResolveDependencies(const fs::path& path, bool recurse)
-    {
-        auto visited = unordered_flat_map<string, bool>{};
-        return ResolveDependenciesImpl(path, recurse, visited);
-    }
-
-    static result<vector<DynamicLibrary>> ResolveDependenciesImpl(
+        static result<vector<DynamicLibrary>> ResolveDependenciesImpl(
         const fs::path& path,
         bool recurse,
         unordered_flat_map<string, bool>& visited)
@@ -185,6 +179,12 @@ namespace dyneeded
         }
 
         return dependencies;
+    }
+
+    result<vector<DynamicLibrary>> ResolveDependencies(const fs::path& path, bool recurse)
+    {
+        auto visited = unordered_flat_map<string, bool>{};
+        return ResolveDependenciesImpl(path, recurse, visited);
     }
 }
 
