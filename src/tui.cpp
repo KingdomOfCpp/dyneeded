@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>  // for allocator, __shared_ptr_access
 #include <string>  // for char_traits, operator+, string, basic_string
+#include <fmt/format.h>
 
 #include "analyse.hpp"
 #include "ftxui/component/component.hpp"
@@ -94,15 +95,26 @@ namespace dyneeded
         return 0;
     }
 
-    void PrintResultsTui(const Args& args, span<const DynamicLibrary> libraries)
+    void PrintResultsTui(const Args& args, const AnalysisResult& result)
     {
         auto elements = vector<Element>{};
         elements.push_back(text("Executable: " + args.Executable.value_or("")));
         elements.push_back(separator());
         elements.push_back(text("Shared objects:"));
-        for (const auto& lib : libraries)
+        for (const auto& lib : result.Dependencies)
         {
             elements.push_back(text("\t" + lib.Name + " => " + lib.Path.string()));
+        }
+        if (result.MinimalGlibc || result.MinimalGlibcxx) {
+            elements.push_back(separator());
+            if (result.MinimalGlibc) {
+                auto [major, minor] = *result.MinimalGlibc;
+                elements.push_back(text(fmt::format("Minimal GLIBC version: {}.{}", major, minor)));
+            }
+            if (result.MinimalGlibcxx) {
+                auto [major, minor] = *result.MinimalGlibcxx;
+                elements.push_back(text(fmt::format("Minimal GLIBCXX version: {}.{}", major, minor)));
+            }
         }
 
         auto doc = vbox(elements) | border;

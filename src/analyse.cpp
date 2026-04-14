@@ -5,36 +5,45 @@
 #include <span>
 
 namespace dyneeded {
-    static void TextOutput(const Args& args,span<const DynamicLibrary> libraries) {
+    static void TextOutput(const Args& args, const AnalysisResult& result) {
         fmt::println("Executable: {}", *args.Executable);
         fmt::println("");
         fmt::println("Shared objects:");
-        for (const auto& dep : libraries) {
+        for (const auto& dep : result.Dependencies) {
             fmt::println("\t{} => {}", dep.Name, dep.Path.string());
+        }
+        fmt::println("");
+        if (result.MinimalGlibc) {
+            auto [glibcMajor, glibcMinor] = *result.MinimalGlibc;
+            fmt::println("Minimal GLIBC version: {}.{}", glibcMajor, glibcMinor);
+        }
+        if (result.MinimalGlibcxx) {
+            auto [glibcppMajor, glibcppMinor] = *result.MinimalGlibcxx;
+            fmt::println("Minimal GLIBCXX version: {}.{}", glibcppMajor, glibcppMinor);
         }
     }
 
-    static void ClassicOutput(const Args& args, span<const DynamicLibrary> libraries) {
-        for (const auto& dep: libraries) {
+    static void ClassicOutput(const Args& args, const AnalysisResult& result) {
+        for (const auto& dep: result.Dependencies) {
             fmt::println("{} => {}", dep.Name, dep.Path.string());
         }
     }
 
-    static void JsonOutput(const Args& args, span<const DynamicLibrary> libraries) {
-        auto json = glz::write<glz::opts{.prettify = true}>(libraries);
+    static void JsonOutput(const Args& args, const AnalysisResult& result) {
+        auto json = glz::write<glz::opts{.prettify = true}>(result);
         if (!json)
             fmt::println(stderr, "Error serializing to json");
         else
             fmt::println("{}", *json);
     }
 
-    static void TreeOutput(const Args& args, span<const DynamicLibrary> libraries) {
+    static void TreeOutput(const Args& args, const AnalysisResult& result) {
         fmt::println(stderr, "Tree output format is not implemented yet, falling back to text output");
-        TextOutput(args, libraries);
+        TextOutput(args, result);
     }
 
-    static void FancyOutput(const Args& args, span<const DynamicLibrary> libraries) {
-        PrintResultsTui(args, libraries);
+    static void FancyOutput(const Args& args, const AnalysisResult& result) {
+        PrintResultsTui(args, result);
     }
 
     void RunAnalysis(const Args &args, OutputFormat outputFormat) {
@@ -43,31 +52,31 @@ namespace dyneeded {
             return;
         }
 
-        auto resolved = ResolveDependencies(*args.Executable, args.Recurse);
-        if (!resolved) {
+        auto analysis = AnalysisResult::AnalyzeExecutable(*args.Executable, args.Recurse);
+        if (!analysis) {
             fmt::println(stderr, "Failed to resolve dependencies for {}", *args.Executable);
             return;
         }
 
         switch (outputFormat) {
         case OutputFormat::Fancy:
-            FancyOutput(args, *resolved);
+            FancyOutput(args, *analysis);
             break;
 
         case OutputFormat::Text:
-            TextOutput(args, *resolved);
+            TextOutput(args, *analysis);
             break;
 
         case OutputFormat::Classic:
-            ClassicOutput(args, *resolved);
+            ClassicOutput(args, *analysis);
             break;
 
         case OutputFormat::Json:
-            JsonOutput(args, *resolved);
+            JsonOutput(args, *analysis);
             break;
             
         case OutputFormat::Tree:
-            TreeOutput(args, *resolved);
+            TreeOutput(args, *analysis);
             break;
         }
     }

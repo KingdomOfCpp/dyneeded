@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fmt/core.h>
 #include <optional>
+#include <regex>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -15,22 +16,18 @@
 
 #if defined(DYNEEDED_LINUX)
 
-namespace dyneeded
-{
+namespace dyneeded {
     static const auto kSearchPaths = vector<fs::path>{
         "/lib", "/usr/lib", "/lib64", "/usr/lib64",
         "/lib/x86_64-linux-gnu", "/usr/lib/x86_64-linux-gnu"
     };
 
-    optional<fs::path> FindLibrary(string_view name, span<const string> rpaths)
-    {
-        for (auto& rpath : rpaths)
-        {
+    optional<fs::path> FindLibrary(string_view name, span<const string> rpaths) {
+        for (auto &rpath: rpaths) {
             if (auto p = fs::path(rpath) / name; fs::exists(p))
                 return p;
         }
-        if (auto env = getenv("LD_LIBRARY_PATH"); env)
-        {
+        if (auto env = getenv("LD_LIBRARY_PATH"); env) {
             stringstream ss(env);
             string token;
             while (getline(ss, token, ':'))
@@ -38,40 +35,33 @@ namespace dyneeded
                     return p;
         }
 
-        for (auto& dir : kSearchPaths)
+        for (auto &dir: kSearchPaths)
             if (auto p = dir / name; fs::exists(p)) return p;
 
         return nullopt;
     }
 
-    unordered_flat_map<string, vector<string>> GetVersions(const LIEF::ELF::Binary* binary)
-    {
-        auto result = unordered_flat_map<string, vector<string>>();
-        for (const auto& req : binary->symbols_version_requirement())
-        {
-            auto& versions = result[req.name()];
-            for (const auto& aux : req.auxiliary_symbols())
-            {
+    unordered_flat_map<string, vector<string> > GetVersions(const LIEF::ELF::Binary *binary) {
+        auto result = unordered_flat_map<string, vector<string> >();
+        for (const auto &req: binary->symbols_version_requirement()) {
+            auto &versions = result[req.name()];
+            for (const auto &aux: req.auxiliary_symbols()) {
                 versions.push_back(aux.name());
             }
         }
         return result;
     }
 
-    vector<string> GetRpaths(const LIEF::ELF::Binary* binary, const fs::path& path)
-    {
+    vector<string> GetRpaths(const LIEF::ELF::Binary *binary, const fs::path &path) {
         auto rpaths = vector<string>();
         rpaths.push_back(path.parent_path().string());
         // add the directory of the binary itself as the first search path
-        for (const auto& entry : binary->dynamic_entries())
-        {
+        for (const auto &entry: binary->dynamic_entries()) {
             if (entry.tag() == LIEF::ELF::DynamicEntry::TAG::RPATH ||
-                entry.tag() == LIEF::ELF::DynamicEntry::TAG::RUNPATH)
-            {
+                entry.tag() == LIEF::ELF::DynamicEntry::TAG::RUNPATH) {
                 // downcase via base class
-                if (const auto* rpath_entry = dynamic_cast<const LIEF::ELF::DynamicEntryRpath*>(&entry))
-                {
-                    for (const auto& p : rpath_entry->paths())
+                if (const auto *rpath_entry = dynamic_cast<const LIEF::ELF::DynamicEntryRpath *>(&entry)) {
+                    for (const auto &p: rpath_entry->paths())
                         rpaths.push_back(p);
                 }
             }
@@ -79,11 +69,10 @@ namespace dyneeded
         return rpaths;
     }
 
-    static result<vector<DynamicLibrary>> ResolveDependenciesImpl(
-        const fs::path& path,
+    static result<vector<DynamicLibrary> > ResolveDependenciesImpl(
+        const fs::path &path,
         bool recurse,
-        unordered_flat_map<string, bool>& visited)
-    {
+        unordered_flat_map<string, bool> &visited) {
         auto elf = LIEF::ELF::Parser::parse(path);
         if (!elf)
             return new_error();
@@ -92,8 +81,7 @@ namespace dyneeded
         auto rpaths = GetRpaths(elf.get(), path);
         auto dependencies = vector<DynamicLibrary>();
 
-        for (const auto& lib : elf->imported_libraries())
-        {
+        for (const auto &lib: elf->imported_libraries()) {
             if (visited.contains(lib))
                 continue;
             visited[lib] = true;
@@ -109,12 +97,11 @@ namespace dyneeded
                 .Versions = (it != versions.end()) ? it->second : vector<string>{}
             });
 
-            if (recurse)
-            {
+            if (recurse) {
                 auto transitive = ResolveDependenciesImpl(*libPath, true, visited);
                 if (!transitive)
                     return transitive; // propagate error
-                for (auto& dep : *transitive)
+                for (auto &dep: *transitive)
                     dependencies.push_back(std::move(dep));
             }
         }
@@ -122,41 +109,99 @@ namespace dyneeded
         return dependencies;
     }
 
-    result<vector<DynamicLibrary>> ResolveDependencies(const fs::path& path, bool recurse)
-    {
+    result<vector<DynamicLibrary> > ResolveDependencies(const fs::path &path, bool recurse) {
         auto visited = unordered_flat_map<string, bool>{};
         return ResolveDependenciesImpl(path, recurse, visited);
+    }
+
+    optional<pair<int,int>> ParseVersionTag(const string& raw, const string& prefix) {
+        // Match "PREFIX_X.Y" or "PREFIX_X.Y.Z"
+        static const regex pattern(R"(\w+_(\d+)\.(\d+))");
+        smatch m;
+        if (!regex_search(raw, m, pattern))
+            return nullopt;
+        if (!raw.starts_with(prefix))
+            return nullopt;
+        return pair(stoi(m[1]), stoi(m[2]));
+    }
+
+    result<pair<int, int>> GetMinimalGlibc(span<DynamicLibrary> dependencies) {
+        // 1. find libc.so
+        auto glibc = static_cast<const DynamicLibrary *>(nullptr);
+        for (const auto& dep : dependencies) {
+            if (dep.Name.starts_with("libc")) {
+                glibc = &dep;
+                break;
+            }
+        }
+
+        if (!glibc)
+            return new_error();
+
+        auto highestVersion = pair(-1, -1);
+        for (const auto& rawVersion : glibc->Versions) {
+            if (auto parsed = ParseVersionTag(rawVersion, "GLIBC_")) {
+                if (*parsed > highestVersion)
+                    highestVersion = *parsed;
+            }
+        }
+
+        if (highestVersion == pair(-1, -1))
+            return new_error();
+
+        return highestVersion;
+    }
+
+    result<pair<int, int>> GetMinimalGlibcxx(span<DynamicLibrary> dependencies) {
+        auto glibcpp = static_cast<const DynamicLibrary *>(nullptr);
+        for (const auto& dep : dependencies) {
+            if (dep.Name.starts_with("libstdc++")) {
+                glibcpp = &dep;
+                break;
+            }
+        }
+
+        if (!glibcpp)
+            return new_error();
+
+        auto highestVersion = pair(-1, -1);
+        for (const auto& rawVersion : glibcpp->Versions) {
+            if (auto parsed = ParseVersionTag(rawVersion, "GLIBCXX_")) {
+                if (*parsed > highestVersion)
+                    highestVersion = *parsed;
+            }
+        }
+
+        if (highestVersion == pair(-1, -1))
+            return new_error();
+
+        return highestVersion;
     }
 }
 
 #elif defined(DYNEEDED_WINDOWS)
 #include <Windows.h>
 
-namespace dyneeded
-{
-    optional<fs::path> FindLibrary(string_view name)
-    {
+namespace dyneeded {
+    optional<fs::path> FindLibrary(string_view name) {
         char buffer[MAX_PATH];
         auto ret = SearchPathA(nullptr, name.data(), nullptr, MAX_PATH, buffer, nullptr);
-        if (ret == 0 || ret > MAX_PATH)
-        {
+        if (ret == 0 || ret > MAX_PATH) {
             return nullopt;
         }
         return fs::path(buffer);
     }
 
-        static result<vector<DynamicLibrary>> ResolveDependenciesImpl(
-        const fs::path& path,
+    static result<vector<DynamicLibrary> > ResolveDependenciesImpl(
+        const fs::path &path,
         bool recurse,
-        unordered_flat_map<string, bool>& visited)
-    {
+        unordered_flat_map<string, bool> &visited) {
         auto pe = LIEF::PE::Parser::parse(path.string());
         if (!pe)
             return new_error();
 
         auto dependencies = vector<DynamicLibrary>();
-        for (const auto& lib : pe->imported_libraries())
-        {
+        for (const auto &lib: pe->imported_libraries()) {
             if (visited.contains(lib))
                 continue;
             visited[lib] = true;
@@ -168,12 +213,11 @@ namespace dyneeded
                 .Versions = vector<string>{}
             });
 
-            if (recurse && libPath)
-            {
+            if (recurse && libPath) {
                 auto transitive = ResolveDependenciesImpl(*libPath, true, visited);
                 if (!transitive)
                     return transitive;
-                for (auto& dep : *transitive)
+                for (auto &dep: *transitive)
                     dependencies.push_back(std::move(dep));
             }
         }
@@ -181,8 +225,7 @@ namespace dyneeded
         return dependencies;
     }
 
-    result<vector<DynamicLibrary>> ResolveDependencies(const fs::path& path, bool recurse)
-    {
+    result<vector<DynamicLibrary> > ResolveDependencies(const fs::path &path, bool recurse) {
         auto visited = unordered_flat_map<string, bool>{};
         return ResolveDependenciesImpl(path, recurse, visited);
     }
@@ -191,3 +234,17 @@ namespace dyneeded
 #else
 #error "Unsupported platform"
 #endif
+
+namespace dyneeded {
+    result<AnalysisResult> AnalysisResult::AnalyzeExecutable(const fs::path &executable, bool recurse) {
+        BOOST_LEAF_AUTO(dependencies, ResolveDependencies(executable, recurse));
+        BOOST_LEAF_AUTO(minimalGlibc, GetMinimalGlibc(dependencies));
+        BOOST_LEAF_AUTO(minimalGlibcpp, GetMinimalGlibcxx(dependencies));
+
+        return AnalysisResult{
+            .Dependencies = std::move(dependencies),
+            .MinimalGlibc = minimalGlibc,
+            .MinimalGlibcxx = minimalGlibcpp
+        };
+    }
+}
