@@ -5,10 +5,10 @@
 
 namespace dyneeded
 {
-    struct DynamicLibrary
-    {
-        string Name;
-        fs::path Path;
-        vector<string> Versions;
-    };
-} // dyneeded
+struct DynamicLibrary
+{
+    string Name;
+    fs::path Path;
+    vector<string> Versions;
+};
+} // namespace dyneeded

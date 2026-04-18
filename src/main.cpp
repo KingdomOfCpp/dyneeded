@@ -3,13 +3,16 @@
 
 #include "../core/resolver.hpp"
 #include "analyse.hpp"
+#include <fmt/ranges.h>
 #include "boost/algorithm/string/split.hpp"
 #include <boost/algorithm/string.hpp>
-#include <vector>
-#include <glaze/glaze.hpp>
 #include <fmt/base.h>
+#include <glaze/glaze.hpp>
+#include <vector>
 
 #include "args.hpp"
+#include "core/formats/elf_executable.hpp"
+#include "core/print/print_tree.hpp"
 #include "glaze/core/write.hpp"
 #include "glaze/json/write.hpp"
 #include "tui.hpp"
@@ -17,11 +20,11 @@
 using namespace dyneeded;
 
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
-    "Available options:\n"
-    "\t-r or --recurse to also get the deps of the deps\n"
-    "\t-j or --json to get the results in json\n"
-    "\t-c or --classic for classic ldd style printing\n"
-    "\tMore hidden!\n";
+                                     "Available options:\n"
+                                     "\t-r or --recurse to also get the deps of the deps\n"
+                                     "\t-j or --json to get the results in json\n"
+                                     "\t-c or --classic for classic ldd style printing\n"
+                                     "\tMore hidden!\n";
 
 static constexpr string_view kBiblePassages[] = {
     "Once, on being asked by the Pharisees when the kingdom of God would come, Jesus replied, "
@@ -29,7 +32,7 @@ static constexpr string_view kBiblePassages[] = {
     "or 'There it is' because the kingdom of God is in your midst.”",
 };
 
-static int MainMode(const Args& args)
+static int MainMode(const Args &args)
 {
     auto outputFormat = OutputFormat::Fancy;
     if (args.Json)
@@ -54,8 +57,9 @@ static int MainMode(const Args& args)
     return 0;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
+    auto grngame = ElfExecutable::FromFile("/home/kingdom_of_cpp/Code/cpp/dyneeded/build/linux/x86_64/debug/dyneeded");
     auto raw_args = vector<string>(argv + 1, argv + argc);
     auto args = Args::Parse(raw_args);
 
@@ -74,7 +78,8 @@ int main(int argc, char* argv[])
     }
     else if (!args.Executable)
     {
-        fmt::println(stderr, "Must supply an executable");
+        fmt::println(stderr, "Must supply an executable, printing help message");
+        fmt::println("{}", kHelpMessage);
         return 1;
     }
     else
