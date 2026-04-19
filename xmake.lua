@@ -54,4 +54,4 @@ xpack("dyneeded")
     set_description("Cross platform dynamic dependency CLI tool")
     set_author("KingdomOfCpp")
 
-    set_formats("nsis", "zip", "targz", "runself")
+    set_formats("nsis", "zip")

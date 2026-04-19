@@ -152,6 +152,24 @@ namespace dyneeded
         return GetMinimumRequiredVersionsImpl(*this);
     }
 
+    unordered_flat_map<string, VersionInfo> ElfExecutable::GetMinimumDirectlyRequiredVersions() const
+    {
+        auto maxByPrefix = unordered_flat_map<string, VersionInfo>();
+
+        for (const auto& versionStr : neededVersions)
+        {
+            auto parsed = VersionInfo::Parse(versionStr);
+            if (!parsed)
+                continue;
+
+            auto it = maxByPrefix.find(parsed->Prefix);
+            if (it == maxByPrefix.end() || parsed->Parts > it->second.Parts)
+                maxByPrefix[parsed->Prefix] = *parsed;
+        }
+
+        return maxByPrefix;
+    }
+
     string_view ElfExecutable::GetName() const
     {
         return name;

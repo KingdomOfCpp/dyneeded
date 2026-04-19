@@ -34,6 +34,7 @@ namespace dyneeded
         static result<ElfExecutable> FromBinary(const fs::path& file, const LIEF::ELF::Binary* elf);
 
         unordered_flat_map<string, VersionInfo> GetMinimumRequiredVersions() const;
+        unordered_flat_map<string, VersionInfo> GetMinimumDirectlyRequiredVersions() const;
 
         string_view GetName() const;
         const fs::path* GetPath() const;

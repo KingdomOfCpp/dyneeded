@@ -103,11 +103,11 @@ void PrintFancy(const TExecutable& executable, const Args& args)
 
     // Versions section
     auto maxPrefixLen = size_t(0);
-    for (const auto& [name, version] : executable.GetMinimumRequiredVersions())
+    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
         maxPrefixLen = std::max(maxPrefixLen, version.Prefix.size());
 
     auto versionRows = vector<Element>();
-    for (const auto& [name, version] : executable.GetMinimumRequiredVersions())
+    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
     {
         auto label = text(version.Prefix) | bold | size(WIDTH, EQUAL, (int)maxPrefixLen);
         auto ver   = text(fmt::format("{}", fmt::join(version.Parts, "."))) | color(Color::Yellow);
@@ -124,7 +124,7 @@ void PrintFancy(const TExecutable& executable, const Args& args)
         hbox({ text(" "), sectionHeader("Dynamic dependencies") }),
         vbox(depRows),
         separator(),
-        hbox({ text(" "), sectionHeader("Minimum required versions") }),
+        hbox({ text(" "), sectionHeader("Minimum directly required versions") }),
         vbox(versionRows),
     }) | border;
 
