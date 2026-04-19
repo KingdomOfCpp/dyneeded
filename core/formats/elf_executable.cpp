@@ -73,9 +73,9 @@ namespace dyneeded
                     continue;
                 visited.insert(canonical); // mark BEFORE recursing
 
-                auto childRpaths = GetRpaths(LIEF::ELF::Parser::parse(*foundLib).get(), *foundLib);
+                auto childRpaths = GetRpaths(LIEF::ELF::Parser::parse(foundLib->string()).get(), *foundLib);
 
-                auto elf = LIEF::ELF::Parser::parse(*foundLib);
+                auto elf = LIEF::ELF::Parser::parse(foundLib->string());
                 if (!elf)
                 {
                     fmt::println(stderr, "Failed to parse ELF that should have been valid: '{}'", foundLib->string());

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "args.hpp"
+#include "bible.hpp"
 #include "core/formats/elf_executable.hpp"
 #include "core/print/print_tree.hpp"
 #include "glaze/core/write.hpp"
@@ -35,12 +36,6 @@ static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
     "\t-j or --json to get the results in json\n"
     "\t-c or --classic for classic ldd style printing\n"
     "\tMore hidden!\n";
-
-static constexpr string_view kBiblePassages[] = {
-    "Once, on being asked by the Pharisees when the kingdom of God would come, Jesus replied, "
-    "“The coming of the kingdom of God is not something that can be observed, nor will people say, 'Here it is' "
-    "or 'There it is' because the kingdom of God is in your midst.”",
-};
 
 template <typename TExecutable>
 void PrintText(const TExecutable& executable, const Args& args)

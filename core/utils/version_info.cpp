@@ -6,8 +6,7 @@ namespace dyneeded
 {
 result<VersionInfo> VersionInfo::Parse(string_view str)
 {
-    // on linux format is like GLIBC_2.3.4
-#ifdef DYNEEDED_LINUX
+    // on elf format is like GLIBC_2.3.4
     auto underscore = str.find('_');
     if (underscore == string_view::npos)
         return new_error();
@@ -30,6 +29,5 @@ result<VersionInfo> VersionInfo::Parse(string_view str)
     }
 
     return VersionInfo{.Prefix = string(prefix), .Parts = std::move(parts)};
-#endif
 }
 } // namespace dyneeded
