@@ -19,7 +19,7 @@ void PrintElfTree(const ElfExecutable &exe, string prefix, bool isLast)
     fmt::println("");
 
     // recurse with extended prefix
-    auto deps = exe.GetDependencies();
+    auto deps = exe.GetDirectDependencies();
     for (size_t i = 0; i < deps.size(); i++)
     {
         bool last = (i == deps.size() - 1);

@@ -1,12 +1,10 @@
 #include <cstddef>
 #include <span>
 
-#include "../core/resolver.hpp"
-#include "analyse.hpp"
-#include <fmt/ranges.h>
 #include "boost/algorithm/string/split.hpp"
 #include <boost/algorithm/string.hpp>
 #include <fmt/base.h>
+#include <fmt/ranges.h>
 #include <glaze/glaze.hpp>
 #include <vector>
 
@@ -15,16 +13,28 @@
 #include "core/print/print_tree.hpp"
 #include "glaze/core/write.hpp"
 #include "glaze/json/write.hpp"
-#include "tui.hpp"
+
+#include <boost/unordered/unordered_flat_map.hpp>
+#include <LIEF/Abstract/Parser.hpp>
+#include <LIEF/Abstract.hpp>
+#include <LIEF/ELF/Binary.hpp>
+#include <LIEF/PE/Binary.hpp>
+#include <LIEF/MachO/Binary.hpp>
+
+#include "core/formats/portable_executable.hpp"
+#include "ftxui/component/component.hpp"
+#include "ftxui/component/component_options.hpp"
+#include "ftxui/component/screen_interactive.hpp"
+#include "ftxui/dom/elements.hpp"
 
 using namespace dyneeded;
 
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
-                                     "Available options:\n"
-                                     "\t-r or --recurse to also get the deps of the deps\n"
-                                     "\t-j or --json to get the results in json\n"
-                                     "\t-c or --classic for classic ldd style printing\n"
-                                     "\tMore hidden!\n";
+    "Available options:\n"
+    "\t-r or --recurse to also get the deps of the deps\n"
+    "\t-j or --json to get the results in json\n"
+    "\t-c or --classic for classic ldd style printing\n"
+    "\tMore hidden!\n";
 
 static constexpr string_view kBiblePassages[] = {
     "Once, on being asked by the Pharisees when the kingdom of God would come, Jesus replied, "
@@ -32,60 +42,182 @@ static constexpr string_view kBiblePassages[] = {
     "or 'There it is' because the kingdom of God is in your midst.”",
 };
 
-static int MainMode(const Args &args)
+template <typename TExecutable>
+void PrintText(const TExecutable& executable, const Args& args)
 {
-    auto outputFormat = OutputFormat::Fancy;
-    if (args.Json)
+    fmt::println("Executable:\n\t{}", *args.Executable);
+    fmt::println("");
+    fmt::println("Dynamic dependencies:");
+    for (const auto& dep : executable.GetDependencies())
     {
-        outputFormat = OutputFormat::Json;
+        if (auto path = dep.GetPath())
+            fmt::println("\t{} => {}", dep.GetName(), path->string());
+        else
+            fmt::println("\t{}", dep.GetName());
+    }
+    fmt::println("");
+    fmt::println("Minimum version of libs:");
+    for (const auto& [name, version] : executable.GetMinimumRequiredVersions())
+    {
+        fmt::println("\t{}: {}", version.Prefix, fmt::join(version.Parts, "."));
+    }
+}
+
+template <typename TExecutable>
+void PrintClassic(const TExecutable& executable)
+{
+    for (const auto& dep : executable.GetDependencies())
+    {
+        if (auto path = dep.GetPath())
+            fmt::println("\t{} => {}", dep.GetName(), path->string());
+        else
+            fmt::println("\t{}", dep.GetName());
+    }
+}
+
+template <typename TExecutable>
+void PrintFancy(const TExecutable& executable, const Args& args)
+{
+    using namespace ftxui;
+
+    // compute max name width for column alignment
+    auto maxNameLen = size_t(0);
+    for (const auto& dep : executable.GetDependencies())
+        maxNameLen = std::max(maxNameLen, dep.GetName().size());
+
+    // Deps section
+    auto depRows = vector<Element>();
+    for (const auto& dep : executable.GetDependencies())
+    {
+        auto name = text(string(dep.GetName())) | color(Color::Cyan);
+        auto nameCell = name | size(WIDTH, EQUAL, (int)maxNameLen);
+
+        auto row = Element();
+        if (auto path = dep.GetPath())
+            row = hbox({ nameCell, text(" => ") | dim, text(path->string()) | color(Color::Green) });
+        else
+            row = hbox({ nameCell, text("  (not found)") | color(Color::RedLight) | dim });
+
+        depRows.push_back(hbox({ text("  "), row }));
+    }
+
+    // Versions section
+    auto maxPrefixLen = size_t(0);
+    for (const auto& [name, version] : executable.GetMinimumRequiredVersions())
+        maxPrefixLen = std::max(maxPrefixLen, version.Prefix.size());
+
+    auto versionRows = vector<Element>();
+    for (const auto& [name, version] : executable.GetMinimumRequiredVersions())
+    {
+        auto label = text(version.Prefix) | bold | size(WIDTH, EQUAL, (int)maxPrefixLen);
+        auto ver   = text(fmt::format("{}", fmt::join(version.Parts, "."))) | color(Color::Yellow);
+        versionRows.push_back(hbox({ text("  "), label, text("  "), ver }));
+    }
+
+    auto sectionHeader = [](const std::string& title) {
+        return text(title) | bold | color(Color::White);
+    };
+
+    auto doc = vbox({
+        hbox({ text(" Executable: ") | dim, text(*args.Executable) | bold | color(Color::Cyan) }),
+        separator(),
+        hbox({ text(" "), sectionHeader("Dynamic dependencies") }),
+        vbox(depRows),
+        separator(),
+        hbox({ text(" "), sectionHeader("Minimum required versions") }),
+        vbox(versionRows),
+    }) | border;
+
+    auto screen = Screen::Create(Dimension::Fit(doc));
+    Render(screen, doc);
+    screen.Print();
+}
+
+template <typename TExecutable>
+int RunRegular(const TExecutable& executable, const Args& args)
+{
+    if (args.Text)
+    {
+        PrintText<TExecutable>(executable, args);
     }
     else if (args.Classic)
     {
-        outputFormat = OutputFormat::Classic;
+        PrintClassic<TExecutable>(executable);
     }
-    else if (args.Tree)
+    else if (args.Json)
     {
-        outputFormat = OutputFormat::Tree;
+        auto result = glz::write<glz::opts{.prettify = true}>(executable);
+        if (!result)
+        {
+            fmt::println(stderr, "Failed to serialize to JSON");
+            return 1;
+        }
+        fmt::println("{}", *result);
     }
-    else if (args.Text)
+    else
     {
-        outputFormat = OutputFormat::Text;
+        PrintFancy(executable, args);
     }
-
-    RunAnalysis(args, outputFormat);
-
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    auto grngame = ElfExecutable::FromFile("/home/kingdom_of_cpp/Code/cpp/dyneeded/build/linux/x86_64/debug/dyneeded");
-    auto raw_args = vector<string>(argv + 1, argv + argc);
-    auto args = Args::Parse(raw_args);
+    auto rawArgs = vector<string>(argv + 1, argv + argc);
+    auto args = Args::Parse(rawArgs);
 
     if (args.Help)
     {
         fmt::println("{}", kHelpMessage);
+        return 0;
     }
     else if (args.Bible)
     {
         auto biblePassage = kBiblePassages[rand() % std::size(kBiblePassages)];
         fmt::println("{}", biblePassage);
+        return 0;
     }
     else if (args.HyprlandBtw)
     {
-        return RunTuiMode(args);
     }
     else if (!args.Executable)
     {
-        fmt::println(stderr, "Must supply an executable, printing help message");
+        fmt::println(stderr, "No executable provided");
         fmt::println("{}", kHelpMessage);
         return 1;
     }
-    else
-    {
-        return MainMode(args);
-    }
+
+    return try_handle_all(
+        [&]() -> result<int>
+        {
+            auto binary = LIEF::Parser::parse(*args.Executable);
+            if (auto elfRaw = dynamic_cast<LIEF::ELF::Binary*>(binary.get()))
+            {
+                BOOST_LEAF_AUTO(elf, ElfExecutable::FromBinary(*args.Executable, elfRaw));
+                return RunRegular(elf, args);
+            }
+            else if (auto macho = dynamic_cast<LIEF::MachO::Binary*>(binary.get()))
+            {
+                fmt::println(stderr, "Mach-O executables are not supported yet");
+                return 1;
+            }
+            else if (auto rawPe = dynamic_cast<LIEF::PE::Binary*>(binary.get()))
+            {
+                fmt::println(stderr, "PE executables are not supported yet");
+                return 1;
+            }
+            return 0;
+        },
+        [](FailedToParseElfError e)
+        {
+            fmt::println("Failed to read the elf executable");
+            return 1;
+        },
+        []()
+        {
+            fmt::println(stderr, "Unknown error");
+            return 1;
+        });
 
     return 0;
 }

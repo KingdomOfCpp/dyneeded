@@ -34,6 +34,8 @@ target("dyneeded_core")
         add_defines("DYNEEDED_WINDOWS", "NOMINMAX", { public = true })
     end
 
+    add_includedirs(".", { public = true })
+
 target("dyneeded")
     set_languages("cxx23")
     set_kind("binary")
