@@ -15,12 +15,12 @@
 #include "glaze/core/write.hpp"
 #include "glaze/json/write.hpp"
 
-#include <boost/unordered/unordered_flat_map.hpp>
-#include <LIEF/Abstract/Parser.hpp>
 #include <LIEF/Abstract.hpp>
+#include <LIEF/Abstract/Parser.hpp>
 #include <LIEF/ELF/Binary.hpp>
-#include <LIEF/PE/Binary.hpp>
 #include <LIEF/MachO/Binary.hpp>
+#include <LIEF/PE/Binary.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include "core/formats/portable_executable.hpp"
 #include "ftxui/component/component.hpp"
@@ -31,19 +31,18 @@
 using namespace dyneeded;
 
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
-    "Available options:\n"
-    "\t-r or --recurse to also get the deps of the deps\n"
-    "\t-j or --json to get the results in json\n"
-    "\t-c or --classic for classic ldd style printing\n"
-    "\tMore hidden!\n";
+                                     "Available options:\n"
+                                     "\t-r or --recurse to also get the deps of the deps\n"
+                                     "\t-j or --json to get the results in json\n"
+                                     "\t-c or --classic for classic ldd style printing\n"
+                                     "\tMore hidden!\n";
 
-template <typename TExecutable>
-void PrintText(const TExecutable& executable, const Args& args)
+template <typename TExecutable> void PrintText(const TExecutable &executable, const Args &args)
 {
     fmt::println("Executable:\n\t{}", *args.Executable);
     fmt::println("");
     fmt::println("Dynamic dependencies:");
-    for (const auto& dep : executable.GetDependencies())
+    for (const auto &dep : executable.GetDependencies())
     {
         if (auto path = dep.GetPath())
             fmt::println("\t{} => {}", dep.GetName(), path->string());
@@ -52,16 +51,15 @@ void PrintText(const TExecutable& executable, const Args& args)
     }
     fmt::println("");
     fmt::println("Minimum version of libs:");
-    for (const auto& [name, version] : executable.GetMinimumRequiredVersions())
+    for (const auto &[name, version] : executable.GetMinimumRequiredVersions())
     {
         fmt::println("\t{}: {}", version.Prefix, fmt::join(version.Parts, "."));
     }
 }
 
-template <typename TExecutable>
-void PrintClassic(const TExecutable& executable)
+template <typename TExecutable> void PrintClassic(const TExecutable &executable)
 {
-    for (const auto& dep : executable.GetDependencies())
+    for (const auto &dep : executable.GetDependencies())
     {
         if (auto path = dep.GetPath())
             fmt::println("\t{} => {}", dep.GetName(), path->string());
@@ -70,66 +68,63 @@ void PrintClassic(const TExecutable& executable)
     }
 }
 
-template <typename TExecutable>
-void PrintFancy(const TExecutable& executable, const Args& args)
+template <typename TExecutable> void PrintFancy(const TExecutable &executable, const Args &args)
 {
     using namespace ftxui;
 
     // compute max name width for column alignment
     auto maxNameLen = size_t(0);
-    for (const auto& dep : executable.GetDependencies())
+    for (const auto &dep : executable.GetDependencies())
         maxNameLen = std::max(maxNameLen, dep.GetName().size());
 
     // Deps section
     auto depRows = vector<Element>();
-    for (const auto& dep : executable.GetDependencies())
+    for (const auto &dep : executable.GetDependencies())
     {
         auto name = text(string(dep.GetName())) | color(Color::Cyan);
         auto nameCell = name | size(WIDTH, EQUAL, (int)maxNameLen);
 
         auto row = Element();
         if (auto path = dep.GetPath())
-            row = hbox({ nameCell, text(" => ") | dim, text(path->string()) | color(Color::Green) });
+            row = hbox({nameCell, text(" => ") | dim, text(path->string()) | color(Color::Green)});
         else
-            row = hbox({ nameCell, text("  (not found)") | color(Color::RedLight) | dim });
+            row = hbox({nameCell, text("  (not found)") | color(Color::RedLight) | dim});
 
-        depRows.push_back(hbox({ text("  "), row }));
+        depRows.push_back(hbox({text("  "), row}));
     }
 
     // Versions section
     auto maxPrefixLen = size_t(0);
-    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
+    for (const auto &[name, version] : executable.GetMinimumDirectlyRequiredVersions())
         maxPrefixLen = std::max(maxPrefixLen, version.Prefix.size());
 
     auto versionRows = vector<Element>();
-    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
+    for (const auto &[name, version] : executable.GetMinimumDirectlyRequiredVersions())
     {
         auto label = text(version.Prefix) | bold | size(WIDTH, EQUAL, (int)maxPrefixLen);
-        auto ver   = text(fmt::format("{}", fmt::join(version.Parts, "."))) | color(Color::Yellow);
-        versionRows.push_back(hbox({ text("  "), label, text("  "), ver }));
+        auto ver = text(fmt::format("{}", fmt::join(version.Parts, "."))) | color(Color::Yellow);
+        versionRows.push_back(hbox({text("  "), label, text("  "), ver}));
     }
 
-    auto sectionHeader = [](const std::string& title) {
-        return text(title) | bold | color(Color::White);
-    };
+    auto sectionHeader = [](const std::string &title) { return text(title) | bold | color(Color::White); };
 
     auto doc = vbox({
-        hbox({ text(" Executable: ") | dim, text(*args.Executable) | bold | color(Color::Cyan) }),
-        separator(),
-        hbox({ text(" "), sectionHeader("Dynamic dependencies") }),
-        vbox(depRows),
-        separator(),
-        hbox({ text(" "), sectionHeader("Minimum directly required versions") }),
-        vbox(versionRows),
-    }) | border;
+                   hbox({text(" Executable: ") | dim, text(*args.Executable) | bold | color(Color::Cyan)}),
+                   separator(),
+                   hbox({text(" "), sectionHeader("Dynamic dependencies")}),
+                   vbox(depRows),
+                   separator(),
+                   hbox({text(" "), sectionHeader("Minimum directly required versions")}),
+                   vbox(versionRows),
+               }) |
+               border;
 
     auto screen = Screen::Create(Dimension::Fit(doc));
     Render(screen, doc);
     screen.Print();
 }
 
-template <typename TExecutable>
-int RunRegular(const TExecutable& executable, const Args& args)
+template <typename TExecutable> int RunRegular(const TExecutable &executable, const Args &args)
 {
     if (args.Text)
     {
@@ -156,7 +151,7 @@ int RunRegular(const TExecutable& executable, const Args& args)
     return 0;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     auto rawArgs = vector<string>(argv + 1, argv + argc);
     auto args = Args::Parse(rawArgs);
@@ -183,33 +178,39 @@ int main(int argc, char* argv[])
     }
 
     return try_handle_all(
-        [&]() -> result<int>
-        {
+        [&]() -> result<int> {
             auto binary = LIEF::Parser::parse(*args.Executable);
-            if (auto elfRaw = dynamic_cast<LIEF::ELF::Binary*>(binary.get()))
+            if (auto elfRaw = dynamic_cast<LIEF::ELF::Binary *>(binary.get()))
             {
+#ifndef DYNEEDED_LINUX
+                fmt::println("ELF path resolution is limited on non-linux platforms");
+#endif
                 BOOST_LEAF_AUTO(elf, ElfExecutable::FromBinary(*args.Executable, elfRaw));
                 return RunRegular(elf, args);
             }
-            else if (auto macho = dynamic_cast<LIEF::MachO::Binary*>(binary.get()))
+            else if (auto macho = dynamic_cast<LIEF::MachO::Binary *>(binary.get()))
             {
+#ifndef DYNEEDED_MACOS
+                fmt::println("Mach-O path resolution is limited on non-macos platforms");
+#endif
                 fmt::println(stderr, "Mach-O executables are not supported yet");
                 return 1;
             }
-            else if (auto rawPe = dynamic_cast<LIEF::PE::Binary*>(binary.get()))
+            else if (auto rawPe = dynamic_cast<LIEF::PE::Binary *>(binary.get()))
             {
-                fmt::println(stderr, "PE executables are not supported yet");
-                return 1;
+#ifndef DYNEEDED_WINDOWS
+                fmt::println("PE path resolution is limited on non-windows platforms");
+#endif
+                BOOST_LEAF_AUTO(pe, PeExecutable::FromBinary(*args.Executable, rawPe));
+                return RunRegular(pe, args);
             }
             return 0;
         },
-        [](FailedToParseElfError e)
-        {
+        [](FailedToParseElfError e) {
             fmt::println("Failed to read the elf executable");
             return 1;
         },
-        []()
-        {
+        []() {
             fmt::println(stderr, "Unknown error");
             return 1;
         });

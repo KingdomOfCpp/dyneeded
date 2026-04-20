@@ -139,11 +139,6 @@ namespace dyneeded
     {
         auto rpaths = GetRpaths(elf, file);
         auto visited = unordered_set<string>{fs::canonical(file).string()};
-
-#ifndef DYNEEDED_LINUX
-        fmt::println("ELF support is limited on non linux platforms");
-#endif
-
         return AnalyzeElfExecutable(elf, file.filename().string(), rpaths, file, visited);
     }
 

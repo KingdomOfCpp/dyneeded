@@ -15,7 +15,7 @@ dyneeded <executable>
 And will get output like
 ```bash
 ╭───────────────────────────────────────────────────────────────────────╮
-│ Executable: /home/kingdom_of_cpp/Téléchargements/dyneeded/bin/dyneeded│
+│ Executable: /home/kingdom_of_cpp/Downloads/dyneeded/bin/dyneeded      │
 ├───────────────────────────────────────────────────────────────────────┤
 │ Dynamic dependencies                                                  │
 │  libstdc++.so.6       => /lib/libstdc++.so.6                          │

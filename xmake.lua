@@ -1,6 +1,9 @@
 add_rules("mode.debug", "mode.release")
 includes("@builtin/xpack")
 
+-- static instead of dynamic runtimes on windows
+-- it makes the exe bigger but prevents a bunch of ship issues
+-- this is like
 if is_plat("windows") then
     if is_mode("debug") then
         set_runtimes("MTd")

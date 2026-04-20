@@ -21,4 +21,4 @@ static constexpr string_view kBiblePassages[] = {
     "As goods increase, so do those who consume them. "
     "And what benefit are they to the owners except to feast their eyes on them?",
 };
-}
+} // namespace dyneeded
