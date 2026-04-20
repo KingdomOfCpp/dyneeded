@@ -50,6 +50,11 @@ but I decided to add LARP options. You must find them thoughbeit.
 ## Being based with dyneeded
 dyneeded is actually gem. Try to find the funny options.
 
+## Helping me develop it
+If it does an error or takes too much time to compute (because yes, lag is a bug), then open an issue! 
+
+You can also try to write code but i'll probably deny your PR and write it myself.
+
 ## Reusing dyneeded code
 At it's `/core/`, it's a small wrapper around the `LIEF` library, so you might want to use `LIEF` directly.
 But if for whatever reason you want to then just plug the `/core/` directory into your project, with its 
