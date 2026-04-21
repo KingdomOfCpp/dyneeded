@@ -23,17 +23,22 @@ jobs:
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y rpm dpkg-dev
+          sudo apt-get install -y rpm dpkg-dev gcc-14 g++-14 binutils curl xz-utils
+          curl -L https://raw.githubusercontent.com/helixarch/debtap/master/debtap -o debtap
+          sudo install -m 755 debtap /usr/local/bin/debtap
 
-      - name: Install WiX (Windows)
+      - name: Install WiX and NSIS (Windows)
         if: runner.os == 'Windows'
-        run: dotnet tool install --global wix
+        run: |
+          dotnet tool install --global wix
+          choco install nsis -y
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 'ffffe619563988cbcfda2b8db2c142654d12eaf5'  # pin to a stable commit
+          vcpkgGitCommitId: 'ffffe619563988cbcfda2b8db2c142654d12eaf5'
 
       - name: Set vcpkg triplet
         shell: bash
@@ -45,23 +50,6 @@ jobs:
           else
             echo "VCPKG_TRIPLET=x64-linux" >> $GITHUB_ENV
           fi
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt-get update
-          sudo apt-get install -y rpm dpkg-dev gcc-14 g++-14 binutils curl xz-utils
-          curl -L https://raw.githubusercontent.com/helixarch/debtap/master/debtap -o debtap
-          sudo install -m 755 debtap /usr/local/bin/debtap
-          sudo debtap -u
-          sudo debtap -u
-
-      - name: Install WiX (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          dotnet tool install --global wix
-          choco install nsis -y
 
       - name: Configure
         shell: bash
@@ -83,7 +71,7 @@ jobs:
       - name: Convert deb to pacman package
         if: matrix.build_type == 'Release' && runner.os == 'Linux'
         working-directory: ${{ github.workspace }}/build
-        run: echo -e "KingdomOfCpp\nGPL3\n" | sudo debtap -q *.deb
+        run: echo -e "KingdomOfCpp\nGPL3\n" | sudo debtap -s -q *.deb
 
       - name: Upload packages (Linux)
         if: matrix.build_type == 'Release' && runner.os == 'Linux'
