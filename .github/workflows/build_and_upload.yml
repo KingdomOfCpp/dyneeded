@@ -26,8 +26,6 @@ jobs:
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install -y rpm dpkg-dev gcc-14 g++-14 binutils curl xz-utils
-          curl -L https://raw.githubusercontent.com/helixarch/debtap/master/debtap -o debtap
-          sudo install -m 755 debtap /usr/local/bin/debtap
 
       - name: Install WiX and NSIS (Windows)
         if: runner.os == 'Windows'
@@ -68,11 +66,6 @@ jobs:
         working-directory: ${{ github.workspace }}/build
         run: cpack -C ${{ matrix.build_type }} --verbose
 
-      - name: Convert deb to pacman package
-        if: matrix.build_type == 'Release' && runner.os == 'Linux'
-        working-directory: ${{ github.workspace }}/build
-        run: echo -e "KingdomOfCpp\nGPL3\n" | sudo debtap -s -q *.deb
-
       - name: Upload packages (Linux)
         if: matrix.build_type == 'Release' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
@@ -82,7 +75,6 @@ jobs:
             build/*.deb
             build/*.rpm
             build/*.tar.gz
-            build/*.pkg.tar.zst
           if-no-files-found: error
 
       - name: Upload packages (Windows)
