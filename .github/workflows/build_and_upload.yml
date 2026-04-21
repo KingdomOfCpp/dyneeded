@@ -36,11 +36,13 @@ jobs:
           vcpkgGitCommitId: 'ffffe619563988cbcfda2b8db2c142654d12eaf5'  # pin to a stable commit
 
       - name: Configure
+        shell: bash
         run: >
           cmake -S ${{ github.workspace }}
           -B ${{ github.workspace }}/build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=${{ runner.os == 'Windows' && 'x64-windows-static' || runner.os == 'macOS' && 'x64-osx' || 'x64-linux' }}
 
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --parallel
