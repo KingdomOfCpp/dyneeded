@@ -1,4 +1,6 @@
+#include <chrono>
 #include <cstddef>
+#include <cstdlib>
 #include <span>
 
 #include "boost/algorithm/string/split.hpp"
@@ -22,6 +24,7 @@
 #include <LIEF/PE/Binary.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 
+#include "core/formats/mach_o_executable.hpp"
 #include "core/formats/portable_executable.hpp"
 #include "ftxui/component/component.hpp"
 #include "ftxui/component/component_options.hpp"
@@ -51,7 +54,7 @@ template <typename TExecutable> void PrintText(const TExecutable &executable, co
     }
     fmt::println("");
     fmt::println("Minimum version of libs:");
-    for (const auto &[name, version] : executable.GetMinimumRequiredVersions())
+    for (const auto &[name, version] : executable.GetMinimumDirectlyRequiredVersions())
     {
         fmt::println("\t{}: {}", version.Prefix, fmt::join(version.Parts, "."));
     }
@@ -144,6 +147,21 @@ template <typename TExecutable> int RunRegular(const TExecutable &executable, co
         }
         fmt::println("{}", *result);
     }
+    else if (args.Tree)
+    {
+        if constexpr (is_same_v<TExecutable, ElfExecutable>)
+        {
+            PrintElfTree(executable);
+        }
+        else if constexpr (is_same_v<TExecutable, PeExecutable>)
+        {
+            // PrintPeTree(executable);
+        }
+        else if constexpr (is_same_v<TExecutable, MachOExecutable>)
+        {
+            // Print
+        }
+    }
     else
     {
         PrintFancy(executable, args);
@@ -163,6 +181,7 @@ int main(int argc, char *argv[])
     }
     else if (args.Bible)
     {
+        srand(chrono::high_resolution_clock::now().time_since_epoch().count());
         auto biblePassage = kBiblePassages[rand() % std::size(kBiblePassages)];
         fmt::println("{}", biblePassage);
         return 0;
@@ -208,6 +227,10 @@ int main(int argc, char *argv[])
         },
         [](FailedToParseElfError e) {
             fmt::println("Failed to read the elf executable");
+            return 1;
+        },
+        [](const exception& e) {
+            fmt::println(stderr, "Exception: {}", e.what());
             return 1;
         },
         []() {
