@@ -37,7 +37,6 @@ In a real terminal its colored with a bunch of other graphical effects that may 
 ## Advanced usage
 There's some more flags if you ever need to use this thing
 seriously
-- `-r` or `--recursive` to also analyze the shared objects and their dependencies
 - `-j` or `--json` to get the output in JSON format
 - `-tr` or `--tree` to get the output in a tree format
 - `-t` or `--text` to get the output in a human readable but not too fancy format (for centrists)

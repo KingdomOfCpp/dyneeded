@@ -35,8 +35,9 @@ using namespace dyneeded;
 
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
                                      "Available options:\n"
-                                     "\t-r or --recurse to also get the deps of the deps\n"
                                      "\t-j or --json to get the results in json\n"
+                                     "\t-tr or --tree to get the output in a tree format\n"
+                                     "\t-t or --text to get the output in a less fancy although readable format\n"
                                      "\t-c or --classic for classic ldd style printing\n"
                                      "\tMore hidden!\n";
 
