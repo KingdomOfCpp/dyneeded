@@ -51,7 +51,7 @@ jobs:
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y rpm dpkg-dev gcc-14 g++-14 binutils pkgfile
+          sudo apt-get install -y rpm dpkg-dev gcc-14 g++-14 binutils curl xz-utils
           git clone https://aur.archlinux.org/debtap.git
           sudo install -m 755 debtap/debtap /usr/local/bin/debtap
           sudo debtap -u
