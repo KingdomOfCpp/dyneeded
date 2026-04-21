@@ -36,14 +36,11 @@ jobs:
           vcpkgGitCommitId: 'ffffe619563988cbcfda2b8db2c142654d12eaf5'  # pin to a stable commit
 
       - name: Configure
-        uses: lukka/run-cmake@v10
-        with:
-          configurePreset: ''
-          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
-          configureWithCMakeArgs: >-
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
-            -B ${{ github.workspace }}/build
+        run: >
+          cmake -S ${{ github.workspace }}
+          -B ${{ github.workspace }}/build
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --parallel
