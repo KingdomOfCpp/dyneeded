@@ -46,8 +46,20 @@ jobs:
             echo "VCPKG_TRIPLET=x64-linux" >> $GITHUB_ENV
           fi
 
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm dpkg-dev gcc-14 g++-14
+
       - name: Configure
-        run: cmake -S "${{ github.workspace }}" -B "${{ github.workspace }}/build" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }}
+        shell: bash
+        run: |
+          cmake -S "${{ github.workspace }}" -B "${{ github.workspace }}/build" \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TRIPLET }} \
+          ${{ runner.os == 'Linux' && '-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14' || '' }}
 
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --parallel
