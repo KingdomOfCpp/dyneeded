@@ -1,54 +1,99 @@
-name: Build and upload
+name: Build
 
 on:
-  - push
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
   build:
+    name: ${{ matrix.os }} - ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
-        buildtype: [debug, release]
-
-    runs-on: ${{ matrix.os }}
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        build_type: [ Debug, Release ]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup xmake
-        uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
-          actions-cache-folder: '.xmake-cache'
-          package-cache: true
-          build-cache: true
+          submodules: recursive
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt update
-          sudo apt install -y gcc-14 g++-14
+          sudo apt-get update
+          sudo apt-get install -y rpm dpkg-dev
 
-
-      - name: Configure (windows)
+      - name: Install WiX (Windows)
         if: runner.os == 'Windows'
-        run: xmake config --toolchain=msvc -m ${{ matrix.buildtype }} -y -vv
+        run: dotnet tool install --global wix
 
-      - name: Configure (linux)
-        if: runner.os == 'Linux'
-        run: xmake config --toolchain=gcc-14 -m ${{ matrix.buildtype }} -y -vv
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 'a34c873a9717a888f58dc05268dea15592c2f822'  # pin to a stable commit
+
+      - name: Configure
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: ''
+          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          configureWithCMakeArgs: >-
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+            -B ${{ github.workspace }}/build
 
       - name: Build
-        run: xmake build -y -vv
+        run: cmake --build ${{ github.workspace }}/build --config ${{ matrix.build_type }} --parallel
 
-      - name: Pack
-        run: xmake pack -y -vv
+      - name: Package
+        if: matrix.build_type == 'Release'
+        working-directory: ${{ github.workspace }}/build
+        run: cpack -C ${{ matrix.build_type }} --verbose
 
-      - name: Upload artifacts
+      - name: Upload packages (Linux)
+        if: matrix.build_type == 'Release' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.buildtype }}
-          path: build/xpack
+          name: linux-packages
+          path: |
+            build/*.deb
+            build/*.rpm
+            build/*.tar.gz
+          if-no-files-found: error
+
+      - name: Upload packages (Windows)
+        if: matrix.build_type == 'Release' && runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-packages
+          path: |
+            build/*.exe
+            build/*.msi
+            build/*.zip
+          if-no-files-found: error
+
+      - name: Upload packages (macOS)
+        if: matrix.build_type == 'Release' && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-packages
+          path: |
+            build/*.tar.gz
+            build/*.dmg
+            build/*.pkg
+          if-no-files-found: error
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.os }}-${{ matrix.build_type }}
+          path: |
+            build/CMakeFiles/CMakeError.log
+            build/CMakeFiles/CMakeOutput.log
+            build/vcpkg-manifest-install.log

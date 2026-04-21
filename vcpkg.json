@@ -1,0 +1,35 @@
+{
+  "name": "dyneeded",
+  "version-string": "2.0.0",
+  "builtin-baseline": "ffffe619563988cbcfda2b8db2c142654d12eaf5",
+  "dependencies": [
+    {
+      "name": "fmt",
+      "version>=": "12.1.0"
+    },
+    {
+      "name": "lief",
+      "version>=": "0.17.6"
+    },
+    {
+      "name": "ftxui",
+      "version>=": "6.1.9"
+    },
+    {
+      "name": "glaze",
+      "version>=": "7.2.3"
+    },
+    {
+      "name": "boost-unordered",
+      "version>=": "1.90.0#1"
+    },
+    {
+      "name": "boost-leaf",
+      "version>=": "1.90.0#1"
+    },
+    {
+      "name": "boost-algorithm",
+      "version>=": "1.90.0#1"
+    }
+  ]
+}
