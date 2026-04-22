@@ -34,19 +34,20 @@
 using namespace dyneeded;
 
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
-                                     "Available options:\n"
-                                     "\t-j or --json to get the results in json\n"
-                                     "\t-tr or --tree to get the output in a tree format\n"
-                                     "\t-t or --text to get the output in a less fancy although readable format\n"
-                                     "\t-c or --classic for classic ldd style printing\n"
-                                     "\tMore hidden!\n";
+    "Available options:\n"
+    "\t-j or --json to get the results in json\n"
+    "\t-tr or --tree to get the output in a tree format\n"
+    "\t-t or --text to get the output in a less fancy although readable format\n"
+    "\t-c or --classic for classic ldd style printing\n"
+    "\tMore hidden!\n";
 
-template <typename TExecutable> void PrintText(const TExecutable &executable, const Args &args)
+template <typename TExecutable>
+void PrintText(const TExecutable& executable, const Args& args)
 {
     fmt::println("Executable:\n\t{}", *args.Executable);
     fmt::println("");
     fmt::println("Dynamic dependencies:");
-    for (const auto &dep : executable.GetDependencies())
+    for (const auto& dep : executable.GetDependencies())
     {
         if (auto path = dep.GetPath())
             fmt::println("\t{} => {}", dep.GetName(), path->string());
@@ -55,15 +56,16 @@ template <typename TExecutable> void PrintText(const TExecutable &executable, co
     }
     fmt::println("");
     fmt::println("Minimum version of libs:");
-    for (const auto &[name, version] : executable.GetMinimumDirectlyRequiredVersions())
+    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
     {
         fmt::println("\t{}: {}", version.Prefix, fmt::join(version.Parts, "."));
     }
 }
 
-template <typename TExecutable> void PrintClassic(const TExecutable &executable)
+template <typename TExecutable>
+void PrintClassic(const TExecutable& executable)
 {
-    for (const auto &dep : executable.GetDependencies())
+    for (const auto& dep : executable.GetDependencies())
     {
         if (auto path = dep.GetPath())
             fmt::println("\t{} => {}", dep.GetName(), path->string());
@@ -72,21 +74,22 @@ template <typename TExecutable> void PrintClassic(const TExecutable &executable)
     }
 }
 
-template <typename TExecutable> void PrintFancy(const TExecutable &executable, const Args &args)
+template <typename TExecutable>
+void PrintFancy(const TExecutable& executable, const Args& args)
 {
     using namespace ftxui;
 
     // compute max name width for column alignment
     auto maxNameLen = size_t(0);
-    for (const auto &dep : executable.GetDependencies())
+    for (const auto& dep : executable.GetDependencies())
         maxNameLen = std::max(maxNameLen, dep.GetName().size());
 
     // Deps section
     auto depRows = vector<Element>();
-    for (const auto &dep : executable.GetDependencies())
+    for (const auto& dep : executable.GetDependencies())
     {
         auto name = text(string(dep.GetName())) | color(Color::Cyan);
-        auto nameCell = name | size(WIDTH, EQUAL, (int)maxNameLen);
+        auto nameCell = name | size(WIDTH, EQUAL, static_cast<int>(maxNameLen));
 
         auto row = Element();
         if (auto path = dep.GetPath())
@@ -99,36 +102,56 @@ template <typename TExecutable> void PrintFancy(const TExecutable &executable, c
 
     // Versions section
     auto maxPrefixLen = size_t(0);
-    for (const auto &[name, version] : executable.GetMinimumDirectlyRequiredVersions())
+    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
         maxPrefixLen = std::max(maxPrefixLen, version.Prefix.size());
 
     auto versionRows = vector<Element>();
-    for (const auto &[name, version] : executable.GetMinimumDirectlyRequiredVersions())
+    for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
     {
         auto label = text(version.Prefix) | bold | size(WIDTH, EQUAL, (int)maxPrefixLen);
         auto ver = text(fmt::format("{}", fmt::join(version.Parts, "."))) | color(Color::Yellow);
         versionRows.push_back(hbox({text("  "), label, text("  "), ver}));
     }
 
-    auto sectionHeader = [](const std::string &title) { return text(title) | bold | color(Color::White); };
+    auto sectionHeader = [](const std::string& title)
+    {
+        return text(title) | bold | color(Color::White);
+    };
 
-    auto doc = vbox({
-                   hbox({text(" Executable: ") | dim, text(*args.Executable) | bold | color(Color::Cyan)}),
-                   separator(),
-                   hbox({text(" "), sectionHeader("Dynamic dependencies")}),
-                   vbox(depRows),
-                   separator(),
-                   hbox({text(" "), sectionHeader("Minimum directly required versions")}),
-                   vbox(versionRows),
-               }) |
-               border;
+    // dont have the minimul directly required versions if theres nothing to show
+    auto doc =
+        !versionRows.empty()
+            ? vbox({
+                hbox({
+                    text(" Executable: ") | dim,
+                    text(fs::path(*args.Executable).filename().string()) | bold | color(Color::Cyan)
+                }),
+                separator(),
+                hbox({text(" "), sectionHeader("Dynamic dependencies")}),
+                vbox(depRows),
+                separator(),
+                hbox({text(" "), sectionHeader("Minimum directly required versions")}),
+                vbox(versionRows),
+            }) |
+            border
+            : vbox({
+                hbox({
+                    text(" Executable: ") | dim,
+                    text(fs::path(*args.Executable).filename().string()) | bold | color(Color::Cyan)
+                }),
+                separator(),
+                hbox({text(" "), sectionHeader("Dynamic dependencies")}),
+                vbox(depRows),
+            }) |
+            border;
 
     auto screen = Screen::Create(Dimension::Fit(doc));
     Render(screen, doc);
     screen.Print();
 }
 
-template <typename TExecutable> int RunRegular(const TExecutable &executable, const Args &args)
+template <typename TExecutable>
+int RunRegular(const TExecutable& executable, const Args& args)
 {
     if (args.Text)
     {
@@ -150,18 +173,7 @@ template <typename TExecutable> int RunRegular(const TExecutable &executable, co
     }
     else if (args.Tree)
     {
-        if constexpr (is_same_v<TExecutable, ElfExecutable>)
-        {
-            PrintElfTree(executable);
-        }
-        else if constexpr (is_same_v<TExecutable, PeExecutable>)
-        {
-            // PrintPeTree(executable);
-        }
-        else if constexpr (is_same_v<TExecutable, MachOExecutable>)
-        {
-            // Print
-        }
+        PrintTree(executable);
     }
     else
     {
@@ -170,7 +182,7 @@ template <typename TExecutable> int RunRegular(const TExecutable &executable, co
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     auto rawArgs = vector<string>(argv + 1, argv + argc);
     auto args = Args::Parse(rawArgs);
@@ -198,9 +210,22 @@ int main(int argc, char *argv[])
     }
 
     return try_handle_all(
-        [&]() -> result<int> {
+        [&]() -> result<int>
+        {
+            if (!fs::exists(*args.Executable))
+            {
+                fmt::println(stderr, "'{}' does not exist", *args.Executable);
+                return 1;
+            }
+
+            if (!fs::is_regular_file(*args.Executable))
+            {
+                fmt::println(stderr, "'{}' is not a regular file", *args.Executable);
+                return 1;
+            }
+
             auto binary = LIEF::Parser::parse(*args.Executable);
-            if (auto elfRaw = dynamic_cast<LIEF::ELF::Binary *>(binary.get()))
+            if (auto elfRaw = dynamic_cast<LIEF::ELF::Binary*>(binary.get()))
             {
 #ifndef DYNEEDED_LINUX
                 fmt::println("ELF path resolution is limited on non-linux platforms");
@@ -208,15 +233,15 @@ int main(int argc, char *argv[])
                 BOOST_LEAF_AUTO(elf, ElfExecutable::FromBinary(*args.Executable, elfRaw));
                 return RunRegular(elf, args);
             }
-            else if (auto macho = dynamic_cast<LIEF::MachO::Binary *>(binary.get()))
+            else if (auto machoRaw = dynamic_cast<LIEF::MachO::Binary*>(binary.get()))
             {
 #ifndef DYNEEDED_MACOS
                 fmt::println("Mach-O path resolution is limited on non-macos platforms");
 #endif
-                fmt::println(stderr, "Mach-O executables are not supported yet");
-                return 1;
+                BOOST_LEAF_AUTO(macho, MachOExecutable::FromBinary(*args.Executable, machoRaw));
+                return RunRegular(macho, args);
             }
-            else if (auto rawPe = dynamic_cast<LIEF::PE::Binary *>(binary.get()))
+            else if (auto rawPe = dynamic_cast<LIEF::PE::Binary*>(binary.get()))
             {
 #ifndef DYNEEDED_WINDOWS
                 fmt::println("PE path resolution is limited on non-windows platforms");
@@ -226,15 +251,18 @@ int main(int argc, char *argv[])
             }
             return 0;
         },
-        [](FailedToParseElfError e) {
+        [](FailedToParseElfError e)
+        {
             fmt::println("Failed to read the elf executable");
             return 1;
         },
-        [](const exception& e) {
+        [](const exception& e)
+        {
             fmt::println(stderr, "Exception: {}", e.what());
             return 1;
         },
-        []() {
+        []()
+        {
             fmt::println(stderr, "Unknown error");
             return 1;
         });

@@ -3,13 +3,11 @@
 
 namespace dyneeded
 {
+    struct VersionInfo
+    {
+        string Prefix;
+        vector<int> Parts;
 
-struct VersionInfo
-{
-    string Prefix;
-    vector<int> Parts;
-
-    static result<VersionInfo> Parse(string_view str);
-};
-
+        static result<VersionInfo> Parse(string_view str);
+    };
 } // namespace dyneeded

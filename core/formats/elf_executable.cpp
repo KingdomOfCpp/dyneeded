@@ -100,7 +100,7 @@ namespace dyneeded
             }
         }
 
-        return {string(name), std::move(path), std::move(deps), nullopt, move(versionDeps)};
+        return {string(name), std::move(path), std::move(deps), nullopt, std::move(versionDeps)};
     }
 
     unordered_flat_map<string, VersionInfo> ElfExecutable::GetMinimumRequiredVersionsImpl(
