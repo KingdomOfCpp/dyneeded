@@ -1,6 +1,7 @@
 # dyneeded: analyze the dynamic dependencies of an executable
 ## Description
-A cross platform and fancier `ldd` / `dumpbin` that's meant for those who are trying to ship native binaries.
+A cross platform and fancier `ldd` / `dumpbin` that's meant for those who are trying to ship native binaries and want to know
+what dll's to include and what system libraries are needed.
 
 It's **killer features** are:
 - Tells you the **minimum required versions** of the libraries (GLIBC, GLIBCXX, CXXABI, GCC) to run the executable
