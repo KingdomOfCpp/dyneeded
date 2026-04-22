@@ -69,8 +69,5 @@ But if for whatever reason you want to then just plug the `/core/` directory int
 dependencies.
 
 ## Building
-1. Make sure to have a compiler and git installed
-2. Make sure to have `xmake` installed
-3. `cd` into the project directory and run `xmake` to build the project
-4. It will ask you to install libraries, just press `y` to install them
-5. The executable will be located in the `build/{os}/{arch}/release` directory
+It builds with `CMake` and `vcpkg` with no extra steps.
+If you don't know how to then search online
