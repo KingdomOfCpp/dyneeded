@@ -43,6 +43,14 @@ seriously
 - `-t` or `--text` to get the output in a human readable but not too fancy format (for centrists)
 - `-c` or `--classic` to get the same output format as `ldd` (for boomers)
 
+## Installing
+### Installing on Windows
+Head over to releases, download the setup from the latest version, run it, tick "add to path", and you're good to go you now can use dyneeded in the terminal
+
+### Installing on Linux
+On fedora based distros, download the .rpm, on debian based distros (including Ubuntu), download the .deb and on Arch based distros, download the .pkg.tar.zst. And then install
+with your distro's package manager.
+
 ## LARPing with dyneeded
 To please the LARPers I could've written this thing in Rust
 but I decided to add LARP options. You must find them thoughbeit.
