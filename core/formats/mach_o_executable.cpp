@@ -17,20 +17,6 @@ namespace dyneeded
         "/Library/Frameworks",
     };
 
-    /// replaces the @rpath, @executable_path, and @loader_path tokens that could be in names
-    static string ExpandInstallName(string_view raw, span<const string> rpaths)
-    {
-        constexpr string_view kRpath = "@rpath/";
-        constexpr string_view kExecPath = "@executable_path/";
-        constexpr string_view kLoaderPath = "@loader_path/";
-
-        if (raw.starts_with(kExecPath))
-            return string(rpaths.empty() ? "" : rpaths[0]) + "/" + string(raw.substr(kExecPath.size()));
-        if (raw.starts_with(kLoaderPath))
-            return string(rpaths.empty() ? "" : rpaths[0]) + "/" + string(raw.substr(kLoaderPath.size()));
-        return string(raw);
-    }
-
     vector<string> MachOExecutable::GetRpaths(const LIEF::MachO::Binary* binary, const fs::path& path)
     {
         auto rpaths = vector<string>();
@@ -61,15 +47,31 @@ namespace dyneeded
 
     optional<fs::path> MachOExecutable::FindLibrary(string_view name, span<const string> rpaths)
     {
-        constexpr string_view kRpath = "@rpath/";
+        constexpr string_view kRpath      = "@rpath/";
+        constexpr string_view kExecPath   = "@executable_path/";
+        constexpr string_view kLoaderPath = "@loader_path/";
 
-        // checks wether a fully qualified path exists
         auto tryPath = [](const fs::path& p) -> optional<fs::path>
         {
             if (fs::exists(p))
                 return p;
             return nullopt;
         };
+
+        if (name.starts_with(kRpath))
+        {
+            auto tail = name.substr(kRpath.size());
+            for (const auto& rp : rpaths)
+                if (auto p = tryPath(fs::path(rp) / tail))
+                    return p;
+            return nullopt;
+        }
+
+        if (name.starts_with(kExecPath))
+            return tryPath(fs::path(rpaths.empty() ? "" : rpaths[0]) / name.substr(kExecPath.size()));
+
+        if (name.starts_with(kLoaderPath))
+            return tryPath(fs::path(rpaths.empty() ? "" : rpaths[0]) / name.substr(kLoaderPath.size()));
 
         if (name.starts_with(kRpath))
         {
@@ -133,7 +135,6 @@ namespace dyneeded
             {
                 if (const auto* bv = dynamic_cast<const LIEF::MachO::BuildVersion*>(&cmd))
                 {
-                    // minos is encoded as X.Y.Z in 32-bit: major<<16 | minor<<8 | patch
                     const auto v = bv->minos();
                     versions.push_back(fmt::format("macOS-{}.{}.{}", v[0], v[1], v[2]));
                 }
