@@ -19,13 +19,6 @@ namespace LIEF::MachO
 
 namespace dyneeded
 {
-    namespace fs = std::filesystem;
-    using std::optional;
-    using std::span;
-    using std::string;
-    using std::string_view;
-    using std::vector;
-
     class MachOExecutable
     {
         string name;
