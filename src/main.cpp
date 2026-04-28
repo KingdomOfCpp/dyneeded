@@ -33,6 +33,8 @@
 
 using namespace dyneeded;
 
+static constexpr auto kVersionString = "dyneeded v2.1.0";
+
 static constexpr auto kHelpMessage = "Usage: dyneeded <executable> [options]\n"
     "Available options:\n"
     "\t-j or --json to get the results in json\n"
@@ -79,12 +81,10 @@ void PrintFancy(const TExecutable& executable, const Args& args)
 {
     using namespace ftxui;
 
-    // compute max name width for column alignment
     auto maxNameLen = size_t(0);
     for (const auto& dep : executable.GetDependencies())
         maxNameLen = std::max(maxNameLen, dep.GetName().size());
 
-    // Deps section
     auto depRows = vector<Element>();
     for (const auto& dep : executable.GetDependencies())
     {
@@ -93,14 +93,13 @@ void PrintFancy(const TExecutable& executable, const Args& args)
 
         auto row = Element();
         if (auto path = dep.GetPath())
-            row = hbox({nameCell, text(" => ") | dim, text(path->string()) | color(Color::Green)});
+            row = hbox({nameCell, text(" => ") | dim, text(path->string()) | color(Color::Green) | flex});
         else
             row = hbox({nameCell, text("  (not found)") | color(Color::RedLight) | dim});
 
-        depRows.push_back(hbox({text("  "), row}));
+        depRows.push_back(hbox({text("  "), row}) | flex);
     }
 
-    // Versions section
     auto maxPrefixLen = size_t(0);
     for (const auto& [name, version] : executable.GetMinimumDirectlyRequiredVersions())
         maxPrefixLen = std::max(maxPrefixLen, version.Prefix.size());
@@ -118,7 +117,6 @@ void PrintFancy(const TExecutable& executable, const Args& args)
         return text(title) | bold | color(Color::White);
     };
 
-    // dont have the minimul directly required versions if theres nothing to show
     auto doc =
         !versionRows.empty()
             ? vbox({
@@ -145,7 +143,7 @@ void PrintFancy(const TExecutable& executable, const Args& args)
             }) |
             border;
 
-    auto screen = Screen::Create(Dimension::Fit(doc));
+    auto screen = Screen::Create(Dimension::Fit(doc), Dimension::Fit(doc));
     Render(screen, doc);
     screen.Print();
 }
@@ -201,6 +199,13 @@ int main(int argc, char* argv[])
     }
     else if (args.HyprlandBtw)
     {
+        fmt::println(stderr, "HyprLARP is not supported yet :(");
+        return 1;
+    }
+    else if (args.Version)
+    {
+        fmt::println("{}", kVersionString);
+        return 0;
     }
     else if (!args.Executable)
     {

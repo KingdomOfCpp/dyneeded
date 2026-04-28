@@ -56,7 +56,7 @@ target_link_libraries(dyneeded PRIVATE dyneeded_core)
 # install with CPACK
 install(TARGETS dyneeded DESTINATION bin)
 set(CPACK_PACKAGE_NAME "dyneeded")
-set(CPACK_PACKAGE_VERSION "2.0.0")
+set(CPACK_PACKAGE_VERSION "2.1.0")
 set(CPACK_PACKAGE_VENDOR "KingdomOfCpp")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Cross platform dynamic dependency CLI tool")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/KingdomOfCpp/dyneeded")
